@@ -5,6 +5,7 @@ import joblib
 import shap
 import matplotlib.pyplot as plt
 import plotly.express as px
+from xgboost import XGBClassifier
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -203,15 +204,17 @@ hr {
 </style>
 """, unsafe_allow_html=True)
 
-# ── LOAD ARTIFACTS ────────────────────────────────────────────
+# ── LOAD ARTIFACTS (native XGBoost JSON — fixes sklearn 1.6.1 compatibility) ──
 @st.cache_resource
 def load_model_and_artifacts():
-    model = joblib.load('loan_approval_model.pkl')
+    preprocessor = joblib.load('preprocessor.pkl')
+    clf = XGBClassifier()
+    clf.load_model('xgb_model.json')
     explainer = joblib.load('shap_explainer.pkl')
     feature_names = joblib.load('feature_names.pkl')
-    return model, explainer, feature_names
+    return preprocessor, clf, explainer, feature_names
 
-model, explainer, feature_names = load_model_and_artifacts()
+preprocessor, clf, explainer, feature_names = load_model_and_artifacts()
 
 # ── LOAD SQL DATA ─────────────────────────────────────────────
 @st.cache_data
@@ -277,33 +280,37 @@ if page == "🔮 Predict Approval":
         loan_intent = st.selectbox("Loan Purpose", ["PERSONAL", "EDUCATION", "MEDICAL", "VENTURE", "HOMEIMPROVEMENT", "DEBTCONSOLIDATION"])
         previous_loan_defaults_on_file = st.selectbox("Previous Loan Default?", ["No", "Yes"])
 
-    # Engineered features
+    # ── ENGINEERED FEATURES ───────────────────────────────────
     loan_to_income = loan_amnt / person_income if person_income > 0 else 0
     income_per_exp_year = person_income / (person_emp_exp + 1)
     credit_to_loan = credit_score / loan_amnt if loan_amnt > 0 else 0
     previous_default_encoded = 1 if previous_loan_defaults_on_file == "Yes" else 0
 
+    # ── INPUT DATAFRAME (exact feature order from training) ───
+    # Numeric first (as per select_dtypes order), then categorical
     input_df = pd.DataFrame([{
         'person_age': person_age,
-        'person_education': person_education,
         'person_income': person_income,
         'person_emp_exp': person_emp_exp,
-        'person_home_ownership': person_home_ownership,
         'loan_amnt': loan_amnt,
-        'loan_intent': loan_intent,
         'loan_int_rate': loan_int_rate,
         'loan_percent_income': loan_percent_income,
         'cb_person_cred_hist_length': cb_person_cred_hist_length,
         'credit_score': credit_score,
         'previous_loan_defaults_on_file': previous_default_encoded,
-        'loan_to_income': loan_to_income,
         'income_per_exp_year': income_per_exp_year,
         'credit_score_to_loan_ratio': credit_to_loan,
+        'loan_to_income': loan_to_income,
+        'person_education': person_education,
+        'person_home_ownership': person_home_ownership,
+        'loan_intent': loan_intent,
     }])
 
     if st.button("🔍 Assess Loan Application", use_container_width=True):
 
-        prob = model.predict_proba(input_df)[0][1]
+        X_transformed = preprocessor.transform(input_df)
+        prob = clf.predict_proba(X_transformed)[0][1]
+
         decision = "✅ APPROVED" if prob >= 0.5 else "❌ REJECTED"
         risk = "🟢 Low Risk" if prob >= 0.7 else "🟡 Medium Risk" if prob >= 0.4 else "🔴 High Risk"
         card_color = "#0d3b1e" if prob >= 0.5 else "#3b0d0d"
@@ -365,8 +372,7 @@ if page == "🔮 Predict Approval":
         st.subheader("🧠 Why this decision? (SHAP Explanation)")
         st.caption("Each bar shows how much a feature pushed the prediction toward Approved (+) or Rejected (−)")
 
-        input_transformed = model.named_steps['preprocessor'].transform(input_df)
-        shap_vals = explainer.shap_values(input_transformed)[0]
+        shap_vals = explainer.shap_values(X_transformed)[0]
 
         shap_df = pd.DataFrame({
             'Feature': feature_names,
