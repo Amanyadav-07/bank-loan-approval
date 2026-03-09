@@ -1,0 +1,9 @@
+person_home_ownership,loan_status,avg_credit_score,avg_loan_amount,total_applications
+MORTGAGE,0,633.2,10455.0,16038
+MORTGAGE,1,630.6,11572.0,2098
+OTHER,0,631.1,9612.0,75
+OTHER,1,617.2,13696.0,39
+OWN,0,632.6,9092.0,2702
+OWN,1,625.0,6411.0,221
+RENT,0,632.2,7799.0,15778
+RENT,1,632.5,10691.0,7584
