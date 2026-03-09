@@ -101,11 +101,22 @@ h2, h3 {
     font-weight: 600 !important;
 }
 [data-testid="stNumberInput"] input {
-    background: transparent !important;
+    background: #0d2137 !important;
     color: #e8eaf6 !important;
-    border: none !important;
+    border: 1px solid rgba(79, 195, 247, 0.2) !important;
+    border-radius: 8px !important;
     font-size: 16px !important;
     font-weight: 600 !important;
+}
+[data-testid="stNumberInput"] > div {
+    background: #0d2137 !important;
+    border: 1px solid rgba(79, 195, 247, 0.2) !important;
+    border-radius: 8px !important;
+}
+[data-testid="stNumberInput"] button {
+    background: #1e3a5f !important;
+    color: #4fc3f7 !important;
+    border: none !important;
 }
 [data-testid="stSelectbox"] {
     background: rgba(13, 33, 55, 0.6) !important;
@@ -225,7 +236,7 @@ df = load_data()
 st.sidebar.title("🏛️ Loan Intelligence")
 page = st.sidebar.radio("Navigate", ["🔮 Predict Approval", "📊 EDA Insights", "🗄️ SQL Analysis"])
 
-# ── SHARED LAYOUT HELPER ──────────────────────────────────────
+# ── SHARED CHART LAYOUT ───────────────────────────────────────
 CHART_LAYOUT = dict(
     paper_bgcolor='rgba(0,0,0,0)',
     plot_bgcolor='rgba(13,27,42,0.8)',
@@ -466,7 +477,6 @@ elif page == "🗄️ SQL Analysis":
     st.markdown("5 business questions answered using SQLite queries on 44,500+ records")
     st.divider()
 
-    # Q2
     st.subheader("Which loan purpose gets rejected most?")
     fig_q2 = px.bar(q2.sort_values('rejection_rate_pct', ascending=True),
                     x='rejection_rate_pct', y='loan_intent', orientation='h',
@@ -476,7 +486,6 @@ elif page == "🗄️ SQL Analysis":
     fig_q2.update_layout(**CHART_LAYOUT)
     st.plotly_chart(fig_q2, use_container_width=True)
 
-    # Q4
     st.subheader("Does higher income mean higher approval?")
     st.caption("Counterintuitive finding: lower income borrowers get approved more — they take smaller loans.")
     fig_q4 = px.bar(q4, x='income_band', y='approval_rate_pct',
@@ -486,7 +495,6 @@ elif page == "🗄️ SQL Analysis":
     fig_q4.update_layout(**CHART_LAYOUT)
     st.plotly_chart(fig_q4, use_container_width=True)
 
-    # Q5
     st.subheader("💣 The most powerful finding: Previous Defaults")
     col1, col2 = st.columns(2)
     with col1:
@@ -502,7 +510,6 @@ elif page == "🗄️ SQL Analysis":
         st.metric("Approval rate — Previous defaulter", f"{q5[q5['previous_loan_defaults_on_file']==1]['approval_rate_pct'].values[0]:.1f}%")
         st.info("A single previous default results in **0% approval rate** across all 22,593 applicants with a default history. This is the strongest single predictor in the entire model.")
 
-    # Q3
     st.subheader("Credit Score by Home Ownership & Approval")
     fig_q3 = px.bar(q3, x='person_home_ownership', y='avg_credit_score',
                     color='loan_status', barmode='group',
@@ -514,7 +521,6 @@ elif page == "🗄️ SQL Analysis":
     fig_q3.update_layout(**CHART_LAYOUT)
     st.plotly_chart(fig_q3, use_container_width=True)
 
-    # Q1
     st.subheader("Does education level matter?")
     st.caption("Finding: Education has almost no impact on approval rate — all levels cluster around 22%.")
     st.dataframe(q1, use_container_width=True)
